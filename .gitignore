@@ -1,0 +1,12 @@
+#ignore all created projects
+sites/*
+
+# Dependency directories
+node_modules/
+vendor/
+
+# Logs
+logs
+*.log
+
+.idea
