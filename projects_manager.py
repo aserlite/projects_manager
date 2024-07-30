@@ -93,24 +93,27 @@ class ProjectManager(tk.Tk):
         self.log_text.see(tk.END)
 
     def set_loading(self, is_loading):
-            if is_loading:
-                if not self.loading_overlay:
-                    self.loading_overlay = tk.Frame(self, bg='black')
-                    self.loading_overlay.place(relwidth=1, relheight=1, anchor=tk.NW)
+        if self.logs_visible:
+            return 0
 
-                    canvas = tk.Canvas(self.loading_overlay, bg='black', highlightthickness=0)
-                    canvas.pack(fill=tk.BOTH, expand=True)
-                    canvas.create_rectangle(0, 0, 1, 1, fill='black', stipple='gray25')
+        if is_loading:
+            if not self.loading_overlay:
+                self.loading_overlay = tk.Frame(self, bg='black')
+                self.loading_overlay.place(relwidth=1, relheight=1, anchor=tk.NW)
 
-                    loading_text = tk.Label(self.loading_overlay, text="Chargement en cours...", fg="white", bg="black", font=("Helvetica", 16, "bold"))
-                    loading_text.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+                canvas = tk.Canvas(self.loading_overlay, bg='black', highlightthickness=0)
+                canvas.pack(fill=tk.BOTH, expand=True)
+                canvas.create_rectangle(0, 0, 1, 1, fill='black', stipple='gray25')
 
-                    self.loading_overlay.lift()
-                    self.loading_overlay.focus_set()
-            else:
-                if self.loading_overlay:
-                    self.loading_overlay.place_forget()
-                    self.loading_overlay = None
+                loading_text = tk.Label(self.loading_overlay, text="Chargement en cours...", fg="white", bg="black", font=("Helvetica", 16, "bold"))
+                loading_text.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+
+                self.loading_overlay.lift()
+                self.loading_overlay.focus_set()
+        else:
+            if self.loading_overlay:
+                self.loading_overlay.place_forget()
+                self.loading_overlay = None
 
     def validate_project_name(self, project_name):
         if not project_name:
@@ -122,7 +125,14 @@ class ProjectManager(tk.Tk):
                 "Le nom du projet contient des caractères invalides. Utilisez uniquement des lettres, des chiffres et des tirets.",
             )
             return False
+        if os.path.isdir(f"sites/{project_name}"):
+            messagebox.showerror(
+                "Erreur",
+                "Un projet portant ce nom existe déjà.",
+            )
+            return False
         return True
+
 
     def check_prerequisites(self):
         missing_tools = []
@@ -244,7 +254,6 @@ class ProjectManager(tk.Tk):
         self.run_command(f"ddev config --webserver-type={webserver_type}")
         self.run_command(f"ddev config --database={database}")
         self.run_command("ddev get ddev/ddev-phpmyadmin")
-        self.run_command("cp ../../.tools/MakefileDDEV.mk Makefile")
         self.run_command("ddev start")
         self.run_command("ddev launch")
         self.project_name_var.set("")
