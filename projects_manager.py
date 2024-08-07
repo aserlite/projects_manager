@@ -14,7 +14,7 @@ class ProjectManager(tk.Tk):
         self.configure(bg="#1a2437")
 
         self.project_name_var = tk.StringVar()
-        self.logs_visible = False
+        self.logs_visible = True
         self.loading_overlay = None
         self.create_widgets()
         self.update_sites_list()
@@ -180,7 +180,7 @@ class ProjectManager(tk.Tk):
                 os.chdir(f"sites/{project_name}")
                 self.run_command("composer create-project --prefer-dist laravel/laravel .")
                 self.update_laravel_env(project_name)
-                self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
+                self.ddev_init(project_name, "apache-fpm", "mysql:8.0", True)
                 messagebox.showinfo("Succès", "Projet Laravel créé avec succès.")
                 self.update_sites_list()
             except Exception as e:
@@ -248,13 +248,15 @@ class ProjectManager(tk.Tk):
         with open(env_path, "w") as file:
             file.writelines(data)
 
-    def ddev_init(self, project_name, webserver_type, database):
+    def ddev_init(self, project_name, webserver_type, database, laravel):
         self.run_command(f"pwd")
         self.run_command(f"ddev config --project-name={project_name}")
         self.run_command(f"ddev config --webserver-type={webserver_type}")
         self.run_command(f"ddev config --database={database}")
         self.run_command("ddev get ddev/ddev-phpmyadmin")
         self.run_command("ddev start")
+        if laravel:
+            self.run_command('ddev php artisan migrate')
         self.run_command("ddev launch")
         self.project_name_var.set("")
         os.chdir(f"../../")
