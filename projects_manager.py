@@ -9,12 +9,15 @@ from tkinter import ttk
 class ProjectManager(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.loading_text = tk.Label(text="", font=("Helvetica", 12))
+        self.loading_text.pack(pady=10)
+
         self.title("Project Manager")
         self.geometry("800x600")
         self.configure(bg="#1a2437")
 
         self.project_name_var = tk.StringVar()
-        self.logs_visible = True
+        self.logs_visible = False
         self.loading_overlay = None
         self.create_widgets()
         self.update_sites_list()
@@ -31,7 +34,9 @@ class ProjectManager(tk.Tk):
         logs_frame.place(relx=0.7, rely=0.6, relwidth=0.3, relheight=0.4)
 
         # Left frame widgets
-        tk.Button(left_frame, text="Poweroff", command=self.call_poweroff, bg="red", fg="white", font=("Helvetica", 10, "bold"),
+        tk.Button(left_frame, text="Poweroff", command=self.call_poweroff, bg="red", fg="white", font=("Helvetica", 16, "bold"),
+                  bd=0, relief="flat", highlightthickness=0, width=10).pack(pady=10,padx=10, anchor="w")
+        tk.Button(left_frame, text="Update", command=self.update_sites_list_btn, bg="green", fg="white", font=("Helvetica", 10, "bold"),
                   bd=0, relief="flat", highlightthickness=0, width=10).pack(pady=10,padx=10, anchor="w")
 
         tk.Label(left_frame, text="Sites installés:", bg="#1a2437", fg="white", font=("Helvetica", 16, "bold")).pack(pady=10)
@@ -48,8 +53,6 @@ class ProjectManager(tk.Tk):
         tk.Label(right_frame, text="Ajouter un projet:", bg="#1a2437", fg="white", font=("Helvetica", 12, "bold")).pack(pady=10)
         tk.Label(right_frame, text="Nom du projet:", bg="#1a2437", fg="white", font=("Helvetica", 10), width=20 , justify="left").pack(pady=1)
         tk.Entry(right_frame, textvariable=self.project_name_var,width=20 ,font=("Helvetica", 10)).pack(pady=5)
-        self.loading_label = tk.Label(right_frame, text="", fg="red", bg="#1a2437")
-        self.loading_label.pack(pady=10)
 
         for text, command in [
             ("WordPress", self.create_wordpress_project),
@@ -87,10 +90,11 @@ class ProjectManager(tk.Tk):
                 self.log_text.pack_forget()
 
     def log(self, message):
-        self.log_text.config(state=tk.NORMAL)
-        self.log_text.insert(tk.END, message + "\n")
-        self.log_text.config(state=tk.DISABLED)
-        self.log_text.see(tk.END)
+        if self.logs_visible:
+            self.log_text.config(state=tk.NORMAL)
+            self.log_text.insert(tk.END, message + "\n")
+            self.log_text.config(state=tk.DISABLED)
+            self.log_text.see(tk.END)
 
     def set_loading(self, is_loading):
         if self.logs_visible:
@@ -105,8 +109,9 @@ class ProjectManager(tk.Tk):
                 canvas.pack(fill=tk.BOTH, expand=True)
                 canvas.create_rectangle(0, 0, 1, 1, fill='black', stipple='gray25')
 
-                loading_text = tk.Label(self.loading_overlay, text="Chargement en cours...", fg="white", bg="black", font=("Helvetica", 16, "bold"))
-                loading_text.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+                # Create the loading_text label here
+                self.loading_text = tk.Label(self.loading_overlay, text="Chargement en cours...", fg="white", bg="black", font=("Helvetica", 16, "bold"))
+                self.loading_text.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
                 self.loading_overlay.lift()
                 self.loading_overlay.focus_set()
@@ -114,8 +119,11 @@ class ProjectManager(tk.Tk):
             if self.loading_overlay:
                 self.loading_overlay.place_forget()
                 self.loading_overlay = None
+                self.loading_text = None  # Reset the loading_text attribute to avoid future references
+
 
     def validate_project_name(self, project_name):
+        self.display_step("Validation du nom du projet")
         if not project_name:
             messagebox.showerror("Erreur", "Le nom du projet ne peut pas être vide.")
             return False
@@ -136,6 +144,7 @@ class ProjectManager(tk.Tk):
 
     def check_prerequisites(self):
         missing_tools = []
+        self.display_step("Vérification des outils")
         for tool in ["ddev", "wp", "composer", "git"]:
             if subprocess.call(f"type {tool}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
                 missing_tools.append(tool)
@@ -154,17 +163,21 @@ class ProjectManager(tk.Tk):
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
+                self.display_step("Création du dossier")
                 self.run_command(f"mkdir -p sites/{project_name}")
                 os.chdir(f"sites/{project_name}")
+                self.display_step("Téléchargement de WordPress CLI")
                 self.run_command("curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar")
                 self.run_command("chmod +x wp-cli.phar")
                 self.run_command("sudo mv wp-cli.phar /usr/local/bin/wp")
+                self.display_step("Création du projet WordPress")
                 self.run_command("wp core download")
+                self.display_step("Configuration du projet WordPress")
                 self.run_command("wp config create --dbname=db --dbuser=db --dbpass=db --dbhost=db --skip-check")
                 self.run_command("rm wp-cli.phar")
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
-                messagebox.showinfo("Succès", f"Projet WordPress créé avec succès. Accessible à l'adresse: https://{project_name}.ddev.site")
                 self.update_sites_list()
+                messagebox.showinfo("Succès", f"Projet WordPress créé avec succès. Accessible à l'adresse: https://{project_name}.ddev.site")
             except Exception as e:
                 os.chdir(f"../../")
                 messagebox.showerror("Erreur", str(e))
@@ -176,13 +189,16 @@ class ProjectManager(tk.Tk):
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
+                self.display_step("Création du dossier")
                 self.run_command(f"mkdir -p sites/{project_name}")
                 os.chdir(f"sites/{project_name}")
+                self.display_step("Création du projet Laravel")
                 self.run_command("composer create-project --prefer-dist laravel/laravel .")
+                self.display_step("Configuration du projet Laravel")
                 self.update_laravel_env(project_name)
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0", True)
-                messagebox.showinfo("Succès", "Projet Laravel créé avec succès.")
                 self.update_sites_list()
+                messagebox.showinfo("Succès", "Projet Laravel créé avec succès.")
             except Exception as e:
                 os.chdir(f"../../")
                 messagebox.showerror("Erreur", str(e))
@@ -196,12 +212,14 @@ class ProjectManager(tk.Tk):
             repo_link = tk.simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:")
             if repo_link:
                 try:
+                    self.display_step("Création du dossier")
                     self.run_command(f"mkdir -p sites/{project_name}")
                     os.chdir(f"sites/{project_name}")
+                    self.display_step("Clonage du projet depuis Git")
                     self.run_command(f"git clone --recursive {repo_link} .")
                     self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
-                    messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
                     self.update_sites_list()  # Mettre à jour la liste des sites
+                    messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
                 except Exception as e:
                     os.chdir(f"../../")
                     messagebox.showerror("Erreur", str(e))
@@ -213,13 +231,15 @@ class ProjectManager(tk.Tk):
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
+                self.display_step("Création du dossier")
                 self.run_command(f"mkdir -p sites/{project_name}")
                 os.chdir(f"sites/{project_name}")
+                self.display_step("Ecriture du fichier index.php")
                 with open("index.php", "w") as file:
                     file.write("<?php echo 'Hello World'; ?>")
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
-                messagebox.showinfo("Succès", "Projet créé from Scratch avec succès.")
                 self.update_sites_list()  # Mettre à jour la liste des sites
+                messagebox.showinfo("Succès", "Projet créé from Scratch avec succès.")
             except Exception as e:
                 os.chdir(f"../../")
                 messagebox.showerror("Erreur", str(e))
@@ -248,15 +268,19 @@ class ProjectManager(tk.Tk):
         with open(env_path, "w") as file:
             file.writelines(data)
 
-    def ddev_init(self, project_name, webserver_type, database, laravel):
-        self.run_command(f"pwd")
+    def ddev_init(self, project_name, webserver_type, database, laravel = None):
+        self.display_step("Configuration de ddev")
         self.run_command(f"ddev config --project-name={project_name}")
         self.run_command(f"ddev config --webserver-type={webserver_type}")
         self.run_command(f"ddev config --database={database}")
+        self.display_step("Installation de phpmyadmin")
         self.run_command("ddev get ddev/ddev-phpmyadmin")
+        self.display_step("Démarrage de ddev")
         self.run_command("ddev start")
         if laravel:
+            self.display_step("Migration de Laravel")
             self.run_command('ddev php artisan migrate')
+        self.display_step("Lancement du site")
         self.run_command("ddev launch")
         self.project_name_var.set("")
         os.chdir(f"../../")
@@ -269,6 +293,10 @@ class ProjectManager(tk.Tk):
         except subprocess.CalledProcessError as e:
             self.log(e.stderr.decode())
             raise Exception(e.stderr.decode())
+
+    def update_sites_list_btn(self):
+        self.display_step("Mise a jour de la liste des sites")
+        self.execute_in_thread(self.update_sites_list)
 
     def update_sites_list(self):
         """Met à jour la liste des sites dans le Frame."""
@@ -332,9 +360,11 @@ class ProjectManager(tk.Tk):
             try:
                 os.chdir(site_path)
                 if action == 'start':
+                    self.display_step("Démarrage du site")
                     self.run_command("ddev start")
                     self.run_command("ddev launch")
                 elif action == 'stop':
+                    self.display_step("Arret du site")
                     self.run_command("ddev stop")
                 os.chdir('../../')
                 self.update_sites_list()
@@ -343,6 +373,7 @@ class ProjectManager(tk.Tk):
 
     def _delete_site(self, site_name):
         site_path = os.path.join('./sites', site_name)
+        self.display_step("Suppression du site")
         if os.path.exists(site_path):
             if self.demande_confirmation(f"Êtes-vous sûr de vouloir supprimer le site {site_name} ?"):
                 try:
@@ -374,6 +405,7 @@ class ProjectManager(tk.Tk):
 
     def poweroff_ddev(self):
         try:
+            self.display_step("Arrêt de ddev")
             self.run_command('ddev poweroff')
             self.update_sites_list()
             messagebox.showinfo("Succès", "ddev a été arrêté avec succès.")
@@ -391,6 +423,12 @@ class ProjectManager(tk.Tk):
                 site_url = f"https://{site_name}.ddev.site"
 
             subprocess.run(f"xdg-open {site_url}", shell=True)
+
+    def display_step(self, step_message):
+        if self.loading_text is not None:
+            self.loading_text.config(text=step_message)
+        else:
+            print("self.loading_text n'est pas initialisé")
 
 if __name__ == "__main__":
     app = ProjectManager()
