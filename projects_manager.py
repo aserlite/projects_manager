@@ -2,57 +2,56 @@ import os
 import subprocess
 import threading
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
-import tkinter.simpledialog
-from tkinter import ttk
+from tkinter import messagebox, simpledialog
+import customtkinter as ctk
 
-class ProjectManager(tk.Tk):
+class ProjectManager(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.loading_text = tk.Label(text="", font=("Helvetica", 12))
+        self.loading_text = ctk.CTkLabel(self, text="", font=("Helvetica", 12))
         self.loading_text.pack(pady=10)
 
         self.title("Project Manager")
-        self.geometry("800x600")
-        self.configure(bg="#1a2437")
+        self.geometry("1000x500")
+        self.configure(bg="#2c2c2c")
 
-        self.project_name_var = tk.StringVar()
-        self.logs_visible = False
+        self.project_name_var = ctk.StringVar()
+        self.logs_visible = True
         self.loading_overlay = None
         self.create_widgets()
         self.update_sites_list()
-        self.toggle_logs()
+
     def create_widgets(self):
         # Container frames
-        left_frame = tk.Frame(self, bg="#1a2437")
+        left_frame = ctk.CTkFrame(self, fg_color="#2c2c2c")
         left_frame.place(relwidth=0.7, relheight=1)
 
-        right_frame = tk.Frame(self, bg="#1a2437")
-        right_frame.place(relx=0.7, relwidth=0.3, relheight=0.6)
-
-        logs_frame = tk.Frame(self, bg="#1a2437")
-        logs_frame.place(relx=0.7, rely=0.6, relwidth=0.3, relheight=0.4)
+        right_frame = ctk.CTkFrame(self, fg_color="#2c2c2c")
+        right_frame.place(relx=0.7, relwidth=0.3, relheight=1)
 
         # Left frame widgets
-        tk.Button(left_frame, text="Poweroff", command=self.call_poweroff, bg="red", fg="white", font=("Helvetica", 16, "bold"),
-                  bd=0, relief="flat", highlightthickness=0, width=10).pack(pady=10,padx=10, anchor="w")
-        tk.Button(left_frame, text="Update", command=self.update_sites_list_btn, bg="green", fg="white", font=("Helvetica", 10, "bold"),
-                  bd=0, relief="flat", highlightthickness=0, width=10).pack(pady=10,padx=10, anchor="w")
+        button_frame = ctk.CTkFrame(left_frame, fg_color="#2c2c2c")  # Un conteneur pour les boutons
+        button_frame.pack(pady=10, padx=10, anchor="w")
 
-        tk.Label(left_frame, text="Sites installés:", bg="#1a2437", fg="white", font=("Helvetica", 16, "bold")).pack(pady=10)
-        self.canvas = tk.Canvas(left_frame, height=200, bg="#1a2437", highlightthickness=0)
+        ctk.CTkButton(button_frame, text="Poweroff", command=self.call_poweroff, fg_color="red", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="Update", command=self.update_sites_list_btn, fg_color="green", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+
+        ctk.CTkLabel(left_frame, text="Sites installés:", fg_color="#2c2c2c", text_color="white", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+        # Use a standard Tkinter Canvas
+        self.canvas = ctk.CTkCanvas(left_frame, height=200, bg="#2c2c2c", bd=0, highlightthickness=0)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.scrollbar = tk.Scrollbar(left_frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.scrollbar = ctk.CTkScrollbar(left_frame, command=self.canvas.yview)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.sites_frame = tk.Frame(self.canvas, bg="#1a2437")
+        self.sites_frame = ctk.CTkFrame(self.canvas, fg_color="#2c2c2c")
         self.canvas.create_window((0, 0), window=self.sites_frame, anchor=tk.NW)
         self.sites_frame.bind("<Configure>", self.on_frame_configure)
         self.canvas.config(yscrollcommand=self.scrollbar.set)
 
         # Right frame widgets
-        tk.Label(right_frame, text="Ajouter un projet:", bg="#1a2437", fg="white", font=("Helvetica", 12, "bold")).pack(pady=10)
-        tk.Label(right_frame, text="Nom du projet:", bg="#1a2437", fg="white", font=("Helvetica", 10), width=20 , justify="left").pack(pady=1)
-        tk.Entry(right_frame, textvariable=self.project_name_var,width=20 ,font=("Helvetica", 10)).pack(pady=5)
+        ctk.CTkLabel(right_frame, text="Ajouter un projet:", fg_color="#2c2c2c", text_color="white", font=("Helvetica", 20, "bold")).pack(pady=10)
+        ctk.CTkLabel(right_frame, text="Nom du projet:", fg_color="#2c2c2c", text_color="white", font=("Helvetica", 14), width=20).pack(pady=1)
+        ctk.CTkEntry(right_frame, textvariable=self.project_name_var, width=200, font=("Helvetica", 10)).pack(pady=5)
 
         for text, command in [
             ("WordPress", self.create_wordpress_project),
@@ -60,57 +59,23 @@ class ProjectManager(tk.Tk):
             ("GitHub", self.create_from_github),
             ("Scratch", self.create_from_scratch)
         ]:
-            tk.Button(right_frame, text=text, command=command, bg="#cdd9ea", fg="black", font=("Helvetica", 10, "bold"),
-                      bd=0, relief="flat", highlightthickness=0, width=20).pack(pady=5, padx=10, ipadx=10)
-
-
-
-        # Logs frame widgets
-        self.log_text = scrolledtext.ScrolledText(logs_frame, wrap=tk.WORD, width=40, height=15, state=tk.DISABLED)
-        self.log_text.pack(pady=10)
-
-
-        # Custom scrollbar style
-        style = ttk.Style()
-        style.configure("Vertical.TScrollbar",
-                        gripcount=0,
-                        background="#333333",
-                        troughcolor="#666666",
-                        arrowcolor="#FFFFFF",
-                        bordercolor="#333333",
-                        lightcolor="#666666",
-                        darkcolor="#333333")
-        style.map("Vertical.TScrollbar",
-                  background=[("active", "#444444")])
-
-    def toggle_logs(self):
-            if self.logs_visible:
-                self.log_text.pack(pady=10)
-            else:
-                self.log_text.pack_forget()
+            ctk.CTkButton(right_frame, text=text, command=command, fg_color="#161616", text_color="white", font=("Helvetica", 14, "bold")).pack(pady=5, padx=10, ipadx=10)
 
     def log(self, message):
         if self.logs_visible:
-            self.log_text.config(state=tk.NORMAL)
-            self.log_text.insert(tk.END, message + "\n")
-            self.log_text.config(state=tk.DISABLED)
-            self.log_text.see(tk.END)
+            print(message)
 
     def set_loading(self, is_loading):
-        if self.logs_visible:
-            return 0
-
         if is_loading:
             if not self.loading_overlay:
-                self.loading_overlay = tk.Frame(self, bg='black')
+                self.loading_overlay = ctk.CTkFrame(self, fg_color='black')
                 self.loading_overlay.place(relwidth=1, relheight=1, anchor=tk.NW)
 
-                canvas = tk.Canvas(self.loading_overlay, bg='black', highlightthickness=0)
+                canvas = ctk.CTkCanvas(self.loading_overlay, bg='black')
                 canvas.pack(fill=tk.BOTH, expand=True)
                 canvas.create_rectangle(0, 0, 1, 1, fill='black', stipple='gray25')
 
-                # Create the loading_text label here
-                self.loading_text = tk.Label(self.loading_overlay, text="Chargement en cours...", fg="white", bg="black", font=("Helvetica", 16, "bold"))
+                self.loading_text = ctk.CTkLabel(self.loading_overlay, text="Chargement en cours...", text_color="white", fg_color="black", font=("Helvetica", 16, "bold"))
                 self.loading_text.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
 
                 self.loading_overlay.lift()
@@ -119,8 +84,7 @@ class ProjectManager(tk.Tk):
             if self.loading_overlay:
                 self.loading_overlay.place_forget()
                 self.loading_overlay = None
-                self.loading_text = None  # Reset the loading_text attribute to avoid future references
-
+                self.loading_text = None
 
     def validate_project_name(self, project_name):
         self.display_step("Validation du nom du projet")
@@ -209,7 +173,7 @@ class ProjectManager(tk.Tk):
     def _create_from_github(self):
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
-            repo_link = tk.simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:")
+            repo_link = ctk.simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:")
             if repo_link:
                 try:
                     self.display_step("Création du dossier")
@@ -295,51 +259,87 @@ class ProjectManager(tk.Tk):
             raise Exception(e.stderr.decode())
 
     def update_sites_list_btn(self):
-        self.display_step("Mise a jour de la liste des sites")
         self.execute_in_thread(self.update_sites_list)
 
     def update_sites_list(self):
-        """Met à jour la liste des sites dans le Frame."""
+        self.display_step("Mise à jour de la liste des sites")
         for widget in self.sites_frame.winfo_children():
-            widget.destroy()
-
+            try:
+                widget.destroy()
+            except Exception as e:
+                print(f"Erreur lors de la destruction d'un widget : {e}")
         sites_dir = './sites'
         if os.path.exists(sites_dir):
-            for site_name in os.listdir(sites_dir):
-                site_path = os.path.join(sites_dir, site_name)
-                if os.path.isdir(site_path):
-                    site_frame = tk.Frame(self.sites_frame, bg="#1a2437")
-                    site_frame.pack(fill=tk.X, pady=5)
-                    circle_color = "red"
-                    status = self.get_ddev_status(site_name)
-                    if status:
-                        circle_color = "green"
-                    circle = tk.Canvas(site_frame, width=20, height=20, bg="#1a2437", highlightthickness=0)
-                    circle.create_oval(5, 5, 15, 15, fill=circle_color, outline=circle_color)
-                    circle.pack(side=tk.LEFT, padx=5)
+            try:
+                sites_list = os.listdir(sites_dir)
+                if not sites_list:
+                    print("The sites directory is empty.")
+                for site_name in sites_list:
+                    site_path = os.path.join(sites_dir, site_name)
+                    if os.path.isdir(site_path):
+                        print(f"Processing site directory: {site_name}")
+                        try:
+                            site_frame = ctk.CTkFrame(self.sites_frame, fg_color="#2c2c2c")
+                            site_frame.pack(fill=tk.X, pady=10)
 
-                    tk.Label(site_frame, text=site_name, bg="#1a2437", fg="white").pack(side=tk.LEFT, padx=5)
+                            status = self.get_ddev_status(site_name)
+                            print(f"Status of {site_name}: {status}")
 
-                    if status:
-                        tk.Button(site_frame, text="Open on browser", command=lambda s=site_name: self.open_browser(s), bg="#cdd9ea", fg='black',bd=0, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=5)
-                        tk.Button(site_frame, text="Open PMA", command=lambda s=site_name: self.open_browser(s,True), bg="#cdd9ea", fg='black',bd=0, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=5)
-                        tk.Button(site_frame, text="Stop", command=lambda s=site_name: self.stop_site(s), bg="#660000",fg='#fff', bd=0 ,font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=5)
+                            circle_color = "green" if status else "red"
+                            circle = ctk.CTkCanvas(site_frame, width=20, height=20, bg="#2c2c2c", highlightthickness=0)
+                            circle.create_oval(5, 5, 15, 15, fill=circle_color, outline=circle_color)
+                            circle.pack(side=tk.LEFT, padx=5)
+
+                            tk.Label(site_frame, text=site_name, bg="#2c2c2c", fg="white",
+                                     font=("Helvetica", 14, "bold")).pack(side=tk.LEFT, padx=5)
+
+                            if status:
+                                ctk.CTkButton(site_frame, text="Open on browser",
+                                              command=lambda s=site_name: self.open_browser(s),
+                                              fg_color="#161616", text_color='white',
+                                              font=("Helvetica", 12, "bold"), width=100).pack(side=tk.LEFT, padx=5)
+                                ctk.CTkButton(site_frame, text="Open PMA",
+                                              command=lambda s=site_name: self.open_browser(s, True),
+                                              fg_color="#161616", text_color='white',
+                                              font=("Helvetica", 12, "bold"), width=100).pack(side=tk.LEFT, padx=5)
+                                ctk.CTkButton(site_frame, text="Open folder",
+                                            command=lambda s=site_name: self.open_folder(site_name),
+                                            fg_color="#161616", text_color='white',
+                                            font=("Helvetica", 12, "bold"), width=100).pack(side=tk.LEFT, padx=5)
+                                ctk.CTkButton(site_frame, text="Stop",
+                                              command=lambda s=site_name: self.stop_site(s),
+                                              fg_color="#660000", text_color='#fff',
+                                              font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
+                            else:
+                                ctk.CTkButton(site_frame, text="Start",
+                                              command=lambda s=site_name: self.start_site(s),
+                                              fg_color="#228B22", text_color='#fff',
+                                              font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
+                                ctk.CTkButton(site_frame, text="Delete",
+                                              command=lambda s=site_name: self.delete_site(s),
+                                              fg_color="#ff0000", text_color='#fff',
+                                              font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
+                        except Exception as e:
+                            print(f"Error processing site {site_name}: {e}")
                     else:
-                        tk.Button(site_frame, text="Start", command=lambda s=site_name: self.start_site(s), bg="#228B22",fg='#fff', bd=0, borderwidth=0, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=5)
-                        tk.Button(site_frame, text="Delete", command=lambda s=site_name: self.delete_site(s), bg="#ff0000",fg='#fff', bd=0, font=("Helvetica", 10, "bold")).pack(side=tk.LEFT, padx=5)
+                        print(f"{site_name} is not a directory.")
+
+            except Exception as e:
+                print(f"Error reading sites directory: {e}")
+        else:
+            print(f"The directory {sites_dir} does not exist.")
+
 
     def get_ddev_status(self, project_name):
         try:
             command = f"ddev list | grep '{project_name}' | awk '{{print $4}}'"
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
             status = result.stdout.strip()
-            self.log(status)
             if "OK" in status:
                 return True
-
             return False
         except subprocess.CalledProcessError as e:
-            self.log(e.stderr.decode())
+            self.log(f"Error checking status: {e.stderr.decode()}")
             return False
 
     def start_site(self, site_name):
@@ -377,6 +377,9 @@ class ProjectManager(tk.Tk):
         if os.path.exists(site_path):
             if self.demande_confirmation(f"Êtes-vous sûr de vouloir supprimer le site {site_name} ?"):
                 try:
+                    print(f"Deleting site {site_name}")
+                    self.run_command(f"ddev delete -O -y {site_name}")
+                    print(f"Deleting folder {site_name}")
                     self.run_command(f"rm -rf {site_path}")
                     self.update_sites_list()
                 except Exception as e:
@@ -402,7 +405,6 @@ class ProjectManager(tk.Tk):
         if self.demande_confirmation("Êtes-vous sûr de vouloir arrêter ddev ?"):
             self.execute_in_thread(self.poweroff_ddev)
 
-
     def poweroff_ddev(self):
         try:
             self.display_step("Arrêt de ddev")
@@ -424,11 +426,16 @@ class ProjectManager(tk.Tk):
 
             subprocess.run(f"xdg-open {site_url}", shell=True)
 
+    def open_folder(self, site_name):
+        """Ouvre le dossier du site dans l'explorateur de fichiers."""
+        site_path = os.path.join('./sites', site_name)
+        subprocess.run(f"xdg-open {site_path}", shell=True)
+
     def display_step(self, step_message):
         if self.loading_text is not None:
-            self.loading_text.config(text=step_message)
+            self.loading_text.configure(text=step_message)
         else:
-            print("self.loading_text n'est pas initialisé")
+            print(f"Loading Text not initialized: {step_message}")
 
 if __name__ == "__main__":
     app = ProjectManager()
