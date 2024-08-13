@@ -4,6 +4,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 import customtkinter as ctk
+import json
 
 class ProjectManager(ctk.CTk):
     def __init__(self):
@@ -86,6 +87,7 @@ class ProjectManager(ctk.CTk):
                 self.loading_overlay = None
                 self.loading_text = None
 
+
     def validate_project_name(self, project_name):
         self.display_step("Validation du nom du projet")
         if not project_name:
@@ -103,8 +105,54 @@ class ProjectManager(ctk.CTk):
                 "Un projet portant ce nom existe déjà.",
             )
             return False
-        return True
 
+        # Vérification dans ddev
+        try:
+            result = subprocess.run(
+                ["ddev", "list", "-j"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            data = json.loads(result.stdout)
+            if 'raw' not in data:
+                raise ValueError("La sortie JSON ne contient pas la clé 'raw'.")
+            projects = data['raw']
+            if not isinstance(projects, list):
+                raise ValueError("La clé 'raw' ne contient pas une liste.")
+            project_names = [p.get('name') for p in projects if isinstance(p, dict)]
+            if project_name in project_names:
+                messagebox.showerror(
+                    "Erreur",
+                    "Un projet avec ce nom existe déjà dans ddev.",
+                )
+                return False
+        except subprocess.CalledProcessError as e:
+            messagebox.showerror(
+                "Erreur",
+                f"Erreur lors de la vérification des projets ddev: {e}"
+            )
+            return False
+        except json.JSONDecodeError as e:
+            messagebox.showerror(
+                "Erreur",
+                f"Erreur de décodage JSON: {e}"
+            )
+            return False
+        except ValueError as e:
+            messagebox.showerror(
+                "Erreur",
+                f"Erreur de traitement des données: {e}"
+            )
+            return False
+        except Exception as e:
+            messagebox.showerror(
+                "Erreur",
+                f"Une erreur inattendue est survenue: {e}"
+            )
+            return False
+
+        return True
 
     def check_prerequisites(self):
         missing_tools = []
