@@ -6,7 +6,7 @@ help: ## Display help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 # Commande par défaut pour lancer l'outil
 up: ## Start
-	@python3 projects_manager.py
+	@python projects_manager.py
 
 start: up
 
@@ -19,3 +19,6 @@ purge: ## Remove all sites
 	  	ddev poweroff; \
 		mkdir sites; \
 	fi
+
+install-dependencies: ## Install dependencies
+	pip install -r requirements.txt
