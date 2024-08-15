@@ -158,8 +158,9 @@ class ProjectManager(ctk.CTk):
     def check_prerequisites(self):
         missing_tools = []
         self.display_step("Vérification des outils")
-        for tool in ["ddev", "wp", "composer", "git"]:
-            if subprocess.call(f"type {tool}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
+        command = "where" if platform.system() == "Windows" else "type"
+        for tool in ["ddev", "composer", "git"]:
+            if subprocess.call(f"{command} {tool}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
                 missing_tools.append(tool)
         if missing_tools:
             messagebox.showerror(
