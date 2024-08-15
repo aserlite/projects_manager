@@ -6,6 +6,7 @@ from tkinter import messagebox, simpledialog
 import customtkinter as ctk
 import json
 import platform
+import shutil
 
 class ProjectManager(ctk.CTk):
     def __init__(self):
@@ -200,8 +201,10 @@ class ProjectManager(ctk.CTk):
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
                 self.display_step("Création du dossier")
-                self.run_command(f"mkdir -p sites/{project_name}")
-                os.chdir(f"sites/{project_name}")
+                project_path = os.path.join("sites", project_name)
+                if not os.path.exists(project_path):
+                    os.makedirs(project_path)
+                os.chdir(project_path)
                 self.display_step("Création du projet Laravel")
                 self.run_command("composer create-project --prefer-dist laravel/laravel .")
                 self.display_step("Configuration du projet Laravel")
@@ -210,29 +213,46 @@ class ProjectManager(ctk.CTk):
                 self.update_sites_list()
                 messagebox.showinfo("Succès", "Projet Laravel créé avec succès.")
             except Exception as e:
-                os.chdir(f"../../")
+                if platform.system() == "Windows":
+                    os.chdir("..\\..\\")
+                else:
+                    os.chdir("../../")
                 messagebox.showerror("Erreur", str(e))
 
     def create_from_github(self):
-        self.execute_in_thread(self._create_from_github)
+        self.set_loading(True)
+        threading.Thread(target=self._create_from_github).start()
 
     def _create_from_github(self):
+        self.after(0, self._ask_github_link)
+
+    def _ask_github_link(self):
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
-            repo_link = ctk.simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:")
+            self.display_step("En attente du lien GitHub")
+            repo_link = simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:", parent=self)
             if repo_link:
-                try:
-                    self.display_step("Création du dossier")
-                    self.run_command(f"mkdir -p sites/{project_name}")
-                    os.chdir(f"sites/{project_name}")
-                    self.display_step("Clonage du projet depuis Git")
-                    self.run_command(f"git clone --recursive {repo_link} .")
-                    self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
-                    self.update_sites_list()  # Mettre à jour la liste des sites
-                    messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
-                except Exception as e:
-                    os.chdir(f"../../")
-                    messagebox.showerror("Erreur", str(e))
+                self.display_step("Sexe")
+                self._process_github_link(repo_link)
+            else:
+                messagebox.showerror("Erreur", "Veuillez entrer un lien GitHub valide.")
+        self.set_loading(False)
+
+    def _process_github_link(self, repo_link):
+        try:
+            self.display_step("Création du dossier")
+            project_name = self.project_name_var.get()
+            project_path = os.path.join("sites", project_name)
+            os.makedirs(project_path, exist_ok=True)
+            os.chdir(project_path)
+            self.display_step("Clonage du projet depuis Git")
+            self.run_command(f"git clone --recursive {repo_link} .")
+            self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
+            self.update_sites_list()
+            messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Une erreur est survenue : {str(e)}")
+
 
     def create_from_scratch(self):
         self.execute_in_thread(self._create_from_scratch)
@@ -242,8 +262,10 @@ class ProjectManager(ctk.CTk):
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
                 self.display_step("Création du dossier")
-                self.run_command(f"mkdir -p sites/{project_name}")
-                os.chdir(f"sites/{project_name}")
+                project_path = os.path.join("sites", project_name)
+                if not os.path.exists(project_path):
+                    os.makedirs(project_path)
+                os.chdir(project_path)
                 self.display_step("Ecriture du fichier index.php")
                 with open("index.php", "w") as file:
                     file.write("<?php echo 'Hello World'; ?>")
@@ -431,7 +453,7 @@ class ProjectManager(ctk.CTk):
                     print(f"Deleting site {site_name}")
                     self.run_command(f"ddev delete -O -y {site_name}")
                     print(f"Deleting folder {site_name}")
-                    self.run_command(f"rm -rf {site_path}")
+                    shutil.rmtree(site_path)
                     self.update_sites_list()
                 except Exception as e:
                     messagebox.showerror("Erreur", f"Erreur lors de la suppression du site {site_name}: {e}")
@@ -467,16 +489,21 @@ class ProjectManager(ctk.CTk):
         return messagebox.askyesno("Confirmation", message)
 
     def open_browser(self, site_name, pma=False):
-            if pma == True:
-                site_url = f"https://{site_name}.ddev.site:8037"
-            else:
-                site_url = f"https://{site_name}.ddev.site"
-
-            subprocess.run(f"xdg-open {site_url}", shell=True)
+        if pma:
+            site_url = f"https://{site_name}.ddev.site:8037"
+        else:
+            site_url = f"https://{site_name}.ddev.site"
+        if platform.system() == "Windows":
+            subprocess.run(f'start {site_url}', shell=True)
+        else:
+            subprocess.run(f'xdg-open {site_url}', shell=True)
 
     def open_folder(self, site_name):
         site_path = os.path.join('./sites', site_name)
-        subprocess.run(f"xdg-open {site_path}", shell=True)
+        if platform.system() == "Windows":
+            subprocess.run(f'start {site_path}', shell=True)
+        else:
+            subprocess.run(f'xdg-open {site_path}', shell=True)
 
     def display_step(self, step_message):
         if self.loading_text is not None:
