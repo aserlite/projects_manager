@@ -373,14 +373,22 @@ class ProjectManager(ctk.CTk):
         else:
             print(f"The directory {sites_dir} does not exist.")
 
-
     def get_ddev_status(self, project_name):
         try:
-            command = f"ddev list | grep '{project_name}' | awk '{{print $4}}'"
+            if platform.system() == "Windows":
+                command = f'ddev list | findstr "{project_name}"'
+            else:
+                command = f"ddev list | grep '{project_name}' | awk '{{print $4}}'"
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
-            status = result.stdout.strip()
+            if platform.system() == "Windows":
+                status = result.stdout.split()[3] if len(result.stdout.split()) > 3 else ''
+                if "running" in status:
+                    return True
+            else:
+                status = result.stdout.strip()
             if "OK" in status:
                 return True
+            print(f"Status: {status}")
             return False
         except subprocess.CalledProcessError as e:
             self.log(f"Error checking status: {e.stderr.decode()}")
