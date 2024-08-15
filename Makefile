@@ -22,3 +22,8 @@ purge: ## Remove all sites
 
 install-dependencies: ## Install dependencies
 	pip install -r requirements.txt
+
+install-certs: ## Install certificates
+	@echo "Installation des certificats"
+	@echo "Veuillez saisir le mot de passe de votre machine"
+	@mkcert -install

@@ -5,13 +5,14 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 import customtkinter as ctk
 import json
+import platform
 
 class ProjectManager(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.loading_text = ctk.CTkLabel(self, text="", font=("Helvetica", 12))
         self.loading_text.pack(pady=10)
-
+        self.start_docker_desktop()
         self.title("Project Manager")
         self.geometry("1000x500")
         self.configure(bg="#2c2c2c")
@@ -480,6 +481,16 @@ class ProjectManager(ctk.CTk):
         else:
             print(f"Loading Text not initialized: {step_message}")
 
+    def start_docker_desktop(self):
+        if platform.system() == "Windows":
+            docker_path = r"C:\Program Files\Docker\Docker\Docker Desktop.exe"
+            if os.path.exists(docker_path):
+                subprocess.Popen([docker_path], shell=True)
+                print("Docker Desktop is starting...")
+            else:
+                print("Docker Desktop executable not found.")
+        else:
+            print("This script is intended to run on Windows.")
 if __name__ == "__main__":
     app = ProjectManager()
     app.mainloop()
