@@ -375,18 +375,12 @@ class ProjectManager(ctk.CTk):
 
     def get_ddev_status(self, project_name):
         try:
-            if platform.system() == "Windows":
-                command = f'ddev list | findstr "{project_name}"'
-            else:
-                command = f"ddev list | grep '{project_name}' | awk '{{print $4}}'"
+            command = f"ddev list | grep '{project_name}' | awk '{{print $4}}'"
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
-            if platform.system() == "Windows":
-                status = result.stdout.split()[3] if len(result.stdout.split()) > 3 else ''
-                if "running" in status:
-                    return True
-            else:
-                status = result.stdout.strip()
+            status = result.stdout.strip()
             if "OK" in status:
+                return True
+            if "running" in status:
                 return True
             print(f"Status: {status}")
             return False
