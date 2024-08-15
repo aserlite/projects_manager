@@ -106,8 +106,6 @@ class ProjectManager(ctk.CTk):
                 "Un projet portant ce nom existe déjà.",
             )
             return False
-
-        # Vérification dans ddev
         try:
             result = subprocess.run(
                 ["ddev", "list", "-j"],
@@ -178,12 +176,15 @@ class ProjectManager(ctk.CTk):
         if self.validate_project_name(project_name) and self.check_prerequisites():
             try:
                 self.display_step("Création du dossier")
-                self.run_command(f"mkdir -p sites/{project_name}")
-                os.chdir(f"sites/{project_name}")
+                project_path = os.path.join("sites", project_name)
+                if not os.path.exists(project_path):
+                    os.makedirs(project_path)
+                os.chdir(project_path)
                 self.display_step("Création du projet WordPress")
-                self.run_command("../../.tools/wp-cli.phar core download")
+                wp_cli_command = "../../.tools/wp-cli.phar" if platform.system() != "Windows" else "php ..\\..\\.tools\\wp-cli.phar"
+                self.run_command(f"{wp_cli_command} core download")
                 self.display_step("Configuration du projet WordPress")
-                self.run_command("../../.tools/wp-cli.phar config create --dbname=db --dbuser=db --dbpass=db --dbhost=db --skip-check")
+                self.run_command(f"{wp_cli_command} config create --dbname=db --dbuser=db --dbpass=db --dbhost=db --skip-check")
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
                 self.update_sites_list()
                 messagebox.showinfo("Succès", f"Projet WordPress créé avec succès. Accessible à l'adresse: https://{project_name}.ddev.site")
@@ -296,12 +297,18 @@ class ProjectManager(ctk.CTk):
 
     def run_command(self, command):
         try:
-            result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.log(result.stdout.decode())
-            return result.stdout.decode()
+            encoding = 'utf-8' if platform.system() != 'Windows' else 'cp1252'
+            result = subprocess.run(
+                command,
+                shell=True,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding=encoding
+            )
+            return result.stdout
         except subprocess.CalledProcessError as e:
-            self.log(e.stderr.decode())
-            raise Exception(e.stderr.decode())
+            raise Exception(f"Command failed with error: {e.stderr}")
 
     def update_sites_list_btn(self):
         self.execute_in_thread(self.update_sites_list)
@@ -390,15 +397,12 @@ class ProjectManager(ctk.CTk):
             return False
 
     def start_site(self, site_name):
-        """Démarre le site en utilisant ddev."""
         self.execute_in_thread(lambda: self._manage_site(site_name, 'start'))
 
     def stop_site(self, site_name):
-        """Arrête le site en utilisant ddev."""
         self.execute_in_thread(lambda: self._manage_site(site_name, 'stop'))
 
     def delete_site(self, site_name):
-        """Supprime le site et son dossier."""
         self.execute_in_thread(lambda: self._delete_site(site_name))
 
     def _manage_site(self, site_name, action):
@@ -433,7 +437,6 @@ class ProjectManager(ctk.CTk):
                     messagebox.showerror("Erreur", f"Erreur lors de la suppression du site {site_name}: {e}")
 
     def execute_in_thread(self, func):
-        """Exécute la fonction cible dans un thread séparé."""
         self.set_loading(True)
         thread = threading.Thread(target=lambda: self._thread_wrapper(func))
         thread.start()
@@ -445,7 +448,6 @@ class ProjectManager(ctk.CTk):
             self.set_loading(False)
 
     def on_frame_configure(self, event):
-        """Appelé lorsque le frame des sites est configuré pour ajuster le canvas."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def call_poweroff(self):
@@ -465,7 +467,6 @@ class ProjectManager(ctk.CTk):
         return messagebox.askyesno("Confirmation", message)
 
     def open_browser(self, site_name, pma=False):
-            """Ouvre le site dans le navigateur."""
             if pma == True:
                 site_url = f"https://{site_name}.ddev.site:8037"
             else:
@@ -474,7 +475,6 @@ class ProjectManager(ctk.CTk):
             subprocess.run(f"xdg-open {site_url}", shell=True)
 
     def open_folder(self, site_name):
-        """Ouvre le dossier du site dans l'explorateur de fichiers."""
         site_path = os.path.join('./sites', site_name)
         subprocess.run(f"xdg-open {site_path}", shell=True)
 
@@ -494,6 +494,7 @@ class ProjectManager(ctk.CTk):
                 print("Docker Desktop executable not found.")
         else:
             print("This script is intended to run on Windows.")
+
 if __name__ == "__main__":
     app = ProjectManager()
     app.mainloop()
