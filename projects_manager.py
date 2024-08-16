@@ -220,28 +220,28 @@ class ProjectManager(ctk.CTk):
                 messagebox.showerror("Erreur", str(e))
 
     def create_from_github(self):
-        self.set_loading(True)
         threading.Thread(target=self._create_from_github).start()
 
     def _create_from_github(self):
-        self.after(0, self._ask_github_link)
-
-    def _ask_github_link(self):
+        self.set_loading(True)
+        self.display_step("En attente du lien GitHub")
         project_name = self.project_name_var.get()
         if self.validate_project_name(project_name) and self.check_prerequisites():
-            self.display_step("En attente du lien GitHub")
-            repo_link = simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:", parent=self)
-            if repo_link:
-                self.display_step("Sexe")
-                self._process_github_link(repo_link)
-            else:
-                messagebox.showerror("Erreur", "Veuillez entrer un lien GitHub valide.")
-        self.set_loading(False)
+            self.after(0, lambda: self._ask_github_link(project_name))
+        else:
+            self.set_loading(False)
 
-    def _process_github_link(self, repo_link):
+    def _ask_github_link(self, project_name):
+        repo_link = simpledialog.askstring("Lien GitHub", "Lien vers le GitHub:", parent=self)
+        if repo_link:
+            threading.Thread(target=self._process_github_link, args=(project_name, repo_link)).start()
+        else:
+            self.set_loading(False)
+            messagebox.showerror("Erreur", "Veuillez entrer un lien GitHub valide.")
+
+    def _process_github_link(self, project_name, repo_link):
         try:
             self.display_step("Création du dossier")
-            project_name = self.project_name_var.get()
             project_path = os.path.join("sites", project_name)
             os.makedirs(project_path, exist_ok=True)
             os.chdir(project_path)
@@ -252,6 +252,8 @@ class ProjectManager(ctk.CTk):
             messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
         except Exception as e:
             messagebox.showerror("Erreur", f"Une erreur est survenue : {str(e)}")
+        finally:
+            self.set_loading(False)
 
 
     def create_from_scratch(self):
