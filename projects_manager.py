@@ -188,7 +188,6 @@ class ProjectManager(ctk.CTk):
                 self.run_command(f"{wp_cli_command} config create --dbname=db --dbuser=db --dbpass=db --dbhost=db --skip-check")
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
                 self.update_sites_list()
-                messagebox.showinfo("Succès", f"Projet WordPress créé avec succès. Accessible à l'adresse: https://{project_name}.ddev.site")
             except Exception as e:
                 os.chdir(f"../../")
                 messagebox.showerror("Erreur", str(e))
@@ -211,7 +210,6 @@ class ProjectManager(ctk.CTk):
                 self.update_laravel_env(project_name)
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0", True)
                 self.update_sites_list()
-                messagebox.showinfo("Succès", "Projet Laravel créé avec succès.")
             except Exception as e:
                 if platform.system() == "Windows":
                     os.chdir("..\\..\\")
@@ -249,7 +247,6 @@ class ProjectManager(ctk.CTk):
             self.run_command(f"git clone --recursive {repo_link} .")
             self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
             self.update_sites_list()
-            messagebox.showinfo("Succès", "Projet créé depuis GitHub avec succès.")
         except Exception as e:
             messagebox.showerror("Erreur", f"Une erreur est survenue : {str(e)}")
         finally:
@@ -272,8 +269,7 @@ class ProjectManager(ctk.CTk):
                 with open("index.php", "w") as file:
                     file.write("<?php echo 'Hello World'; ?>")
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0")
-                self.update_sites_list()  # Mettre à jour la liste des sites
-                messagebox.showinfo("Succès", "Projet créé from Scratch avec succès.")
+                self.update_sites_list()
             except Exception as e:
                 os.chdir(f"../../")
                 messagebox.showerror("Erreur", str(e))
