@@ -158,7 +158,7 @@ class ProjectManager(ctk.CTk):
         missing_tools = []
         self.display_step("Vérification des outils")
         command = "where" if platform.system() == "Windows" else "type"
-        for tool in ["ddev", "composer", "git"]:
+        for tool in ["ddev", "git"]:
             if subprocess.call(f"{command} {tool}", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) != 0:
                 missing_tools.append(tool)
         if missing_tools:
@@ -205,7 +205,8 @@ class ProjectManager(ctk.CTk):
                     os.makedirs(project_path)
                 os.chdir(project_path)
                 self.display_step("Création du projet Laravel")
-                self.run_command("composer create-project --prefer-dist laravel/laravel .")
+                composer = "../../.tools/composer.phar" if platform.system() != "Windows" else "php ..\\..\\.tools\\composer.phar"
+                self.run_command(f"{composer} create-project --prefer-dist laravel/laravel .")
                 self.display_step("Configuration du projet Laravel")
                 self.update_laravel_env(project_name)
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0", True)
