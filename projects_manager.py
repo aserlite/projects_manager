@@ -7,6 +7,7 @@ import customtkinter as ctk
 import json
 import platform
 import shutil
+from PIL import Image
 
 class ProjectManager(ctk.CTk):
     def __init__(self):
@@ -14,8 +15,9 @@ class ProjectManager(ctk.CTk):
         self.loading_text = ctk.CTkLabel(self, text="", font=("Helvetica", 12))
         self.loading_text.pack(pady=10)
         self.start_docker_desktop()
-        self.title("Project Manager")
-        self.geometry("1000x500")
+        self.title("DevFlow - Gestionnaire de projets")
+        self.geometry("1250x750")
+        self.iconbitmap('logo.ico')
         self.configure(bg="#2c2c2c")
 
         self.project_name_var = ctk.StringVar()
@@ -25,23 +27,29 @@ class ProjectManager(ctk.CTk):
         self.update_sites_list()
 
     def create_widgets(self):
-        # Container frames
+        # Barre de navigation
+        nav_frame = ctk.CTkFrame(self, fg_color="#161616", height=50)
+        nav_frame.place(relwidth=1, relheight=0.1)
+
+        # Ajouter le logo à gauche de la barre de navigation
+        logo_image = ctk.CTkImage(light_image=Image.open("logo.ico"), size=(40, 40))
+        logo_label = ctk.CTkLabel(nav_frame, image=logo_image, text="")
+        logo_label.pack(side="left", padx=20)
+
+        # Ajouter des boutons de navigation dans la barre de navigation
+        ctk.CTkLabel(nav_frame, text="DevFlow", text_color="white", font=("Helvetica", 20, "bold")).pack(side="left", padx=5)
+        ctk.CTkButton(nav_frame, text="Poweroff", command=self.call_poweroff, fg_color="#8B0000", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="right", padx=15)
+        ctk.CTkButton(nav_frame, text="Update list", command=self.update_sites_list_btn, fg_color="#1a81c4", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="right", padx=5)
+
+        # Containers for the rest of the content
         left_frame = ctk.CTkFrame(self, fg_color="#2c2c2c")
-        left_frame.place(relwidth=0.7, relheight=1)
+        left_frame.place(rely=0.1, relwidth=0.7, relheight=0.9)
 
         right_frame = ctk.CTkFrame(self, fg_color="#2c2c2c")
-        right_frame.place(relx=0.7, relwidth=0.3, relheight=1)
-
-        # Left frame widgets
-        button_frame = ctk.CTkFrame(left_frame, fg_color="#2c2c2c")  # Un conteneur pour les boutons
-        button_frame.pack(pady=10, padx=10, anchor="w")
-
-        ctk.CTkButton(button_frame, text="Poweroff", command=self.call_poweroff, fg_color="red", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
-        ctk.CTkButton(button_frame, text="Update", command=self.update_sites_list_btn, fg_color="green", text_color="white", width=125, font=("Helvetica", 14, "bold")).pack(side="left", padx=5)
+        right_frame.place(rely=0.1, relx=0.7, relwidth=0.3, relheight=0.9)
 
         ctk.CTkLabel(left_frame, text="Sites installés:", fg_color="#2c2c2c", text_color="white", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        # Use a standard Tkinter Canvas
         self.canvas = ctk.CTkCanvas(left_frame, height=200, bg="#2c2c2c", bd=0, highlightthickness=0)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar = ctk.CTkScrollbar(left_frame, command=self.canvas.yview)
@@ -358,7 +366,7 @@ class ProjectManager(ctk.CTk):
                             status = self.get_ddev_status(site_name)
                             print(f"Status of {site_name}: {status}")
 
-                            circle_color = "green" if status else "red"
+                            circle_color = "#0e7d2b" if status else "red"
                             circle = ctk.CTkCanvas(site_frame, width=20, height=20, bg="#2c2c2c", highlightthickness=0)
                             circle.create_oval(5, 5, 15, 15, fill=circle_color, outline=circle_color)
                             circle.pack(side=tk.LEFT, padx=5)
@@ -381,16 +389,16 @@ class ProjectManager(ctk.CTk):
                                             font=("Helvetica", 12, "bold"), width=100).pack(side=tk.LEFT, padx=5)
                                 ctk.CTkButton(site_frame, text="Stop",
                                               command=lambda s=site_name: self.stop_site(s),
-                                              fg_color="#660000", text_color='#fff',
+                                              fg_color="#8B0000", text_color='#fff',
                                               font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
                             else:
                                 ctk.CTkButton(site_frame, text="Start",
                                               command=lambda s=site_name: self.start_site(s),
-                                              fg_color="#228B22", text_color='#fff',
+                                              fg_color="#0e7d2b", text_color='#fff',
                                               font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
                                 ctk.CTkButton(site_frame, text="Delete",
                                               command=lambda s=site_name: self.delete_site(s),
-                                              fg_color="#ff0000", text_color='#fff',
+                                              fg_color="#8B0000", text_color='#fff',
                                               font=("Helvetica", 12, "bold"), width=50).pack(side=tk.LEFT, padx=5)
                         except Exception as e:
                             print(f"Error processing site {site_name}: {e}")
