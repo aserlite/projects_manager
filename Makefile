@@ -27,3 +27,6 @@ install-certs: ## Install certificates
 	@echo "Installation des certificats"
 	@echo "Veuillez saisir le mot de passe de votre machine"
 	@mkcert -install
+
+install: ## Install dependencies and certificates
+	@python installer.py
