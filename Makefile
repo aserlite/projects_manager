@@ -13,9 +13,9 @@ start: up
 purge: ## Remove all sites
 	@echo "Tous les sites vont être supprimés, êtes-vous sûr? [Y/N]"; \
 	read response; \
-	if [ "$$response" = "Y" ]; then \
+	if [ "$$response" = "Y" ] || [ "$$response" = "YES" ] || [ "$$response" = "y" ] || [ "$$response" = "yes" ] || [ "$$response" = "Yes" ]; then \
 	  	ddev poweroff; \
-		rm -R ./sites; \
+		rm -Rf ./sites; \
 	  	ddev poweroff; \
 		mkdir sites; \
 	fi
