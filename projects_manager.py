@@ -215,6 +215,8 @@ class ProjectManager(ctk.CTk):
                 self.display_step("Création du projet Laravel")
                 composer = "../../.tools/composer.phar" if platform.system() != "Windows" else "php ..\\..\\.tools\\composer.phar"
                 self.run_command(f"{composer} create-project --prefer-dist laravel/laravel .")
+                self.display_step("Ajout du makefile")
+                self.run_command("cp ../../.tools/Laravel/MakefileLaravel.mk Makefile.mk")
                 self.display_step("Configuration du projet Laravel")
                 self.update_laravel_env(project_name)
                 self.ddev_init(project_name, "apache-fpm", "mysql:8.0", True)
